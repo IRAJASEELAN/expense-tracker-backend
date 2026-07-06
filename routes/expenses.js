@@ -1,42 +1,51 @@
 const express = require('express');
 const router = express.Router();
 const Expense = require('../models/Expense');
+const auth = require('../middleware/authMiddleware'); // Bring in the bouncer!
 
-// GET all expenses
-router.get('/', async (req, res) => {
-  try {
-    const expenses = await Expense.find().sort({ createdAt: -1 }); // Newest first
-    res.json(expenses);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+// 1. GET all expenses for the LOGGED IN user
+router.get('/', auth, async (req, res) => {
+    try {
+        // Find only expenses where the user ID matches the VIP pass
+        const expenses = await Expense.find({ user: req.user.id }); 
+        res.json(expenses);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// POST a new expense
-router.post('/', async (req, res) => {
-  const expense = new Expense({
-    text: req.body.text,
-    amount: req.body.amount,
-    type: req.body.type
-  });
-
-  try {
-    const newExpense = await expense.save();
-    res.status(201).json(newExpense);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+// 2. ADD a new expense for the LOGGED IN user
+router.post('/', auth, async (req, res) => {
+    try {
+        const newExpense = new Expense({
+            text: req.body.text,
+            amount: req.body.amount,
+            type: req.body.type,
+            user: req.user.id // Attach the user's ID to the expense before saving
+        });
+        const savedExpense = await newExpense.save();
+        res.status(201).json(savedExpense);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// DELETE an expense
-router.delete('/:id', async (req, res) => {
-  try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
-    if (!expense) return res.status(404).json({ message: 'Expense not found' });
-    res.json({ message: 'Expense deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+// 3. DELETE an expense (making sure they own it)
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const expense = await Expense.findById(req.params.id);
+        if (!expense) return res.status(404).json({ message: 'Expense not found' });
+        
+        // Ensure the person trying to delete it is the actual owner
+        if (expense.user.toString() !== req.user.id) {
+            return res.status(401).json({ message: 'Not authorized to delete this' });
+        }
+
+        await expense.deleteOne();
+        res.json({ message: 'Expense removed' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;

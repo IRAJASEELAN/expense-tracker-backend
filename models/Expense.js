@@ -13,7 +13,13 @@ const ExpenseSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['income', 'expense'] // Ensures only these two words are accepted
+    enum: ['income', 'expense'] 
+  },
+  // NEW: This links the expense to a specific user's ID
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   createdAt: {
     type: Date,

@@ -6,8 +6,8 @@ const cors = require('cors');
 const app = express();
 
 // Middleware
-app.use(cors()); // Allows your frontend to communicate with this backend
-app.use(express.json()); // Allows the server to accept JSON data in requests
+app.use(cors()); 
+app.use(express.json()); 
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -16,7 +16,10 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 const expenseRoutes = require('./routes/expenses');
+const authRoutes = require('./routes/auth'); // <-- WE ADDED THIS
+
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/auth', authRoutes); // <-- WE ADDED THIS
 
 // Start Server
 const PORT = process.env.PORT || 5000;
